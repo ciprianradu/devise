@@ -1,5 +1,9 @@
-<h2>Log in</h2>
+<% if devise_mapping.sign_in_or_up_together? -%>
+  <%= render "devise/shared/sign_in_or_up" %>
+<% else -%>
+  <h2>Log in</h2>
 
-<%= render "devise/sessions/new" %>
+  <%= render "devise/sessions/new" %>
+<% end -%>
 
 <%= render "devise/shared/links" %>

@@ -276,6 +276,10 @@ module Devise
   mattr_accessor :token_generator
   @@token_generator = nil
 
+  # If we want to have a page were the users can either sign in or they can sign up 
+  mattr_accessor :sign_in_or_up_together
+  @@sign_in_or_up_together = true
+
   # Default way to set up Devise. Run rails generate devise_install to create
   # a fresh initializer with all configuration values.
   def self.setup
