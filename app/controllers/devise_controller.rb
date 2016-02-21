@@ -8,7 +8,7 @@ class DeviseController < Devise.parent_controller.constantize
 
   if respond_to?(:helper_method)
     helpers = %w(resource scope_name resource_name signed_in_resource
-                 resource_class resource_params devise_mapping sign_in_or_up_together)
+                 resource_class resource_params devise_mapping)
     helper_method(*helpers)
   end
 
@@ -31,10 +31,6 @@ class DeviseController < Devise.parent_controller.constantize
   end
 
   protected
-
-  def sign_in_or_up_together?
-    Devise.sign_in_or_up_together
-  end
 
   # Gets the actual resource stored in the instance variable
   def resource
