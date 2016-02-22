@@ -159,6 +159,11 @@ module Devise
   mattr_accessor :scoped_views
   @@scoped_views = false
 
+  # Defines which strategy can be used to degrade the service.
+  # Values: :failed_attempts, :none
+  mattr_accessor :degrade_strategy
+  @@degrade_strategy = :failed_attempts
+
   # Defines which strategy can be used to lock an account.
   # Values: :failed_attempts, :none
   mattr_accessor :lock_strategy

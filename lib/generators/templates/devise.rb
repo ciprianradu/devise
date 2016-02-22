@@ -163,6 +163,12 @@ Devise.setup do |config|
   # time the user will be asked for credentials again. Default is 30 minutes.
   # config.timeout_in = 30.minutes
 
+  # ==> Configuration for :degradable
+  # Defines which strategy will be used to degrade the service.
+  # :failed_attempts = Degrades the service based on the number of failed attempts to sign in.
+  # :none            = No service degradation strategy. You should handle this by yourself.
+  # config.degrade_strategy = :failed_attempts
+
   # ==> Configuration for :lockable
   # Defines which strategy will be used to lock an account.
   # :failed_attempts = Locks an account after a number of failed attempts to sign in.
