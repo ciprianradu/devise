@@ -42,7 +42,7 @@ module Devise
       def valid_for_authentication?
         return super unless persisted? && degrade_strategy_enabled?(:failed_attempts)
 
-        if super && !service_degraded?
+        if super
           true
         else
           self.failed_attempts ||= 0
