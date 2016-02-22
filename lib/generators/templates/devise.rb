@@ -129,9 +129,6 @@ Devise.setup do |config|
   # unconfirmed_email column, and copied to email column on successful confirmation.
   config.reconfirmable = true
 
-  # It true, then the sign-in and sign-up pages will be the same and allow both actions
-  # config.sign_in_or_up_together = true
-
   # Defines which key will be used when confirming an account
   # config.confirmation_keys = [:email]
 

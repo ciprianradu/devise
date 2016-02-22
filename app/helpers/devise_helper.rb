@@ -22,8 +22,4 @@ module DeviseHelper
 
     html.html_safe
   end
-
-  def sign_in_or_up_together?
-    Devise.sign_in_or_up_together
-  end
 end
