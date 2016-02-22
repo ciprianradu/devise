@@ -26,6 +26,7 @@ It's composed of 10 modules:
 * [Timeoutable](http://rubydoc.info/github/plataformatec/devise/master/Devise/Models/Timeoutable): expires sessions that have not been active in a specified period of time.
 * [Validatable](http://rubydoc.info/github/plataformatec/devise/master/Devise/Models/Validatable): provides validations of email and password. It's optional and can be customized, so you're able to define your own validations.
 * [Lockable](http://rubydoc.info/github/plataformatec/devise/master/Devise/Models/Lockable): locks an account after a specified number of failed sign-in attempts. Can unlock via email or after a specified time period.
+* [Degradable](http://rubydoc.info/github/ciprianradu/devise/master/Devise/Models/Degradable): degrades the service more and more based on the number of failed sign-in attempts. The quality of service is restored as soon as the correct credentials are provided.
 
 ## Information
 
