@@ -26,20 +26,6 @@ module Devise
         attributes
       end
 
-      # Lock a user setting its locked_at to actual time.
-      # * +opts+: Hash options if you don't want to send email
-      #   when you lock access, you could pass the next hash
-      #   `{ send_instructions: false } as option`.
-      def lock_access!(opts = { })
-        self.locked_at = Time.now.utc
-
-        if unlock_strategy_enabled?(:email) && opts.fetch(:send_instructions, true)
-          send_unlock_instructions
-        else
-          save(validate: false)
-        end
-      end
-
       # Reseting the service degradation for a user by cleaning the failed_attempts.
       def reset_service_degradation!
         self.failed_attempts = 0 if respond_to?(:failed_attempts=)
@@ -52,8 +38,7 @@ module Devise
       end
 
       # Overwrites valid_for_authentication? from Devise::Models::Authenticatable
-      # for verifying whether a user is allowed to sign in or not. If the user
-      # is locked, it should never be allowed.
+      # for verifying whether a user is allowed to sign in or not.
       def valid_for_authentication?
         return super unless persisted? && degrade_strategy_enabled?(:failed_attempts)
 
