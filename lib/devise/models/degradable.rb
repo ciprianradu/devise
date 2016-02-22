@@ -43,6 +43,8 @@ module Devise
         return super unless persisted? && degrade_strategy_enabled?(:failed_attempts)
 
         if super
+          reset_service_degradation!
+
           true
         else
           self.failed_attempts ||= 0
