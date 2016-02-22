@@ -169,6 +169,11 @@ Devise.setup do |config|
   # :none            = No service degradation strategy. You should handle this by yourself.
   # config.degrade_strategy = :failed_attempts
 
+  # Defines the increment by which the degradation in service will
+  # take place. Please feel free to change it to your heart's content.
+  # config.degrade_increment = 0.25
+
+
   # ==> Configuration for :lockable
   # Defines which strategy will be used to lock an account.
   # :failed_attempts = Locks an account after a number of failed attempts to sign in.

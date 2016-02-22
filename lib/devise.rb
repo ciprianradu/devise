@@ -159,6 +159,11 @@ module Devise
   mattr_accessor :scoped_views
   @@scoped_views = false
 
+  # Defines the increment by which the degradation in service will
+  # take place. Please feel free to change it to your heart's content.
+  mattr_accessor :degrade_increment
+  @@degrade_increment = 0.25
+
   # Defines which strategy can be used to degrade the service.
   # Values: :failed_attempts, :none
   mattr_accessor :degrade_strategy

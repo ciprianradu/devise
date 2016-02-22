@@ -50,7 +50,7 @@ module Devise
 
           save(validate: false)
 
-          sleep self.failed_attempts * 0.25
+          sleep self.failed_attempts * Devise.degrade_increment
 
           false
         end
