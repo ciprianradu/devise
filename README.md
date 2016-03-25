@@ -14,7 +14,7 @@ Devise is a flexible authentication solution for Rails based on Warden. It:
 * Allows you to have multiple models signed in at the same time;
 * Is based on a modularity concept: use only what you really need.
 
-It's composed of 10 modules:
+It's composed of 11 modules:
 
 * [Database Authenticatable](http://rubydoc.info/github/plataformatec/devise/master/Devise/Models/DatabaseAuthenticatable): hashes and stores a password in the database to validate the authenticity of a user while signing in. The authentication can be done both through POST requests or HTTP Basic Authentication.
 * [Omniauthable](http://rubydoc.info/github/plataformatec/devise/master/Devise/Models/Omniauthable): adds OmniAuth (https://github.com/intridea/omniauth) support.
