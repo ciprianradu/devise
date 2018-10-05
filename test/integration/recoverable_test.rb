@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 
 class PasswordTest < Devise::IntegrationTest
@@ -10,7 +12,7 @@ class PasswordTest < Devise::IntegrationTest
   def request_forgot_password(&block)
     visit_new_password_path
     assert_response :success
-    assert_not warden.authenticated?(:user)
+    refute warden.authenticated?(:user)
 
     fill_in 'email', with: 'user@test.com'
     yield if block_given?
@@ -146,8 +148,8 @@ class PasswordTest < Devise::IntegrationTest
     assert_response :success
     assert_current_url '/users/password'
     assert_have_selector '#error_explanation'
-    assert_contain /Reset password token(.*)invalid/
-    assert_not user.reload.valid_password?('987654321')
+    assert_contain %r{Reset password token(.*)invalid}
+    refute user.reload.valid_password?('987654321')
   end
 
   test 'not authenticated user with valid reset password token but invalid password should not be able to change their password' do
@@ -161,7 +163,7 @@ class PasswordTest < Devise::IntegrationTest
     assert_current_url '/users/password'
     assert_have_selector '#error_explanation'
     assert_contain "Password confirmation doesn't match Password"
-    assert_not user.reload.valid_password?('987654321')
+    refute user.reload.valid_password?('987654321')
   end
 
   test 'not authenticated user with valid data should be able to change their password' do
@@ -181,7 +183,7 @@ class PasswordTest < Devise::IntegrationTest
     reset_password {  fill_in 'Confirm new password', with: 'other_password' }
     assert_response :success
     assert_have_selector '#error_explanation'
-    assert_not user.reload.valid_password?('987654321')
+    refute user.reload.valid_password?('987654321')
 
     reset_password visit: false
     assert_contain 'Your password has been changed successfully.'
@@ -212,7 +214,7 @@ class PasswordTest < Devise::IntegrationTest
   test 'does not sign in user automatically after changing its password if it\'s locked and unlock strategy is :none or :time' do
     [:none, :time].each do |strategy|
       swap Devise, unlock_strategy: strategy do
-        user = create_user(locked: true)
+        create_user(locked: true)
         request_forgot_password
         reset_password
 

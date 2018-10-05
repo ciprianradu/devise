@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 
 module Devise
@@ -67,18 +69,18 @@ class DeviseTest < ActiveSupport::TestCase
   end
 
   test 'add new module using the helper method' do
-    assert_nothing_raised(Exception) { Devise.add_module(:coconut) }
+    Devise.add_module(:coconut)
     assert_equal 1, Devise::ALL.select { |v| v == :coconut }.size
-    assert_not Devise::STRATEGIES.include?(:coconut)
-    assert_not defined?(Devise::Models::Coconut)
+    refute Devise::STRATEGIES.include?(:coconut)
+    refute defined?(Devise::Models::Coconut)
     Devise::ALL.delete(:coconut)
 
-    assert_nothing_raised(Exception) { Devise.add_module(:banana, strategy: :fruits) }
+    Devise.add_module(:banana, strategy: :fruits)
     assert_equal :fruits, Devise::STRATEGIES[:banana]
     Devise::ALL.delete(:banana)
     Devise::STRATEGIES.delete(:banana)
 
-    assert_nothing_raised(Exception) { Devise.add_module(:kivi, controller: :fruits) }
+    Devise.add_module(:kivi, controller: :fruits)
     assert_equal :fruits, Devise::CONTROLLERS[:kivi]
     Devise::ALL.delete(:kivi)
     Devise::CONTROLLERS.delete(:kivi)
@@ -86,16 +88,16 @@ class DeviseTest < ActiveSupport::TestCase
 
   test 'should complain when comparing empty or different sized passes' do
     [nil, ""].each do |empty|
-      assert_not Devise.secure_compare(empty, "something")
-      assert_not Devise.secure_compare("something", empty)
-      assert_not Devise.secure_compare(empty, empty)
+      refute Devise.secure_compare(empty, "something")
+      refute Devise.secure_compare("something", empty)
+      refute Devise.secure_compare(empty, empty)
     end
-    assert_not Devise.secure_compare("size_1", "size_four")
+    refute Devise.secure_compare("size_1", "size_four")
   end
 
   test 'Devise.email_regexp should match valid email addresses' do
-    valid_emails = ["test@example.com", "jo@jo.co", "f4$_m@you.com", "testing.example@example.com.ua"]
-    non_valid_emails = ["rex", "test@go,com", "test user@example.com", "test_user@example server.com", "test_user@example.com."]
+    valid_emails = ["test@example.com", "jo@jo.co", "f4$_m@you.com", "testing.example@example.com.ua", "test@tt", "test@valid---domain.com"]
+    non_valid_emails = ["rex", "test user@example.com", "test_user@example server.com"]
 
     valid_emails.each do |email|
       assert_match Devise.email_regexp, email

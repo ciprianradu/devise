@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Use this hook to configure devise mailer, warden hooks and so forth.
 # Many of these configuration options can be set straight in your model.
 Devise.setup do |config|
@@ -7,6 +9,10 @@ Devise.setup do |config|
   # Devise will use the `secret_key_base` as its `secret_key`
   # by default. You can change it below and use your own secret key.
   # config.secret_key = '<%= SecureRandom.hex(64) %>'
+  
+  # ==> Controller configuration
+  # Configure the parent class to the devise controllers.
+  # config.parent_controller = 'DeviseController'
 
   # ==> Mailer Configuration
   # Configure the e-mail address which will be shown in Devise::Mailer,
@@ -90,6 +96,12 @@ Devise.setup do |config|
   # from the server. You can disable this option at your own risk.
   # config.clean_up_csrf_token_on_authentication = true
 
+  # When false, Devise will not attempt to reload routes on eager load.
+  # This can reduce the time taken to boot the app but if your application
+  # requires the Devise mappings to be loaded during boot time the application
+  # won't boot properly.
+  # config.reload_routes = true
+
   # ==> Configuration for :database_authenticatable
   # For bcrypt, this is the cost for hashing the password and defaults to 11. If
   # using other algorithms, it sets how many times you want the password to be hashed.
@@ -104,7 +116,10 @@ Devise.setup do |config|
   # Set up a pepper to generate the hashed password.
   # config.pepper = '<%= SecureRandom.hex(64) %>'
 
-  # Send a notification email when the user's password is changed
+  # Send a notification to the original email when the user's email is changed.
+  # config.send_email_changed_notification = false
+
+  # Send a notification email when the user's password is changed.
   # config.send_password_change_notification = false
 
   # ==> Configuration for :confirmable
@@ -148,12 +163,12 @@ Devise.setup do |config|
 
   # ==> Configuration for :validatable
   # Range for password length.
-  config.password_length = 8..72
+  config.password_length = 6..128
 
   # Email regex used to validate email formats. It simply asserts that
   # one (and only one) @ exists in the given string. This is mainly
   # to give user feedback and not to assert the e-mail validity.
-  # config.email_regexp = /\A[^@]+@[^@]+\z/
+  config.email_regexp = /\A[^@\s]+@[^@\s]+\z/
 
   # ==> Configuration for :timeoutable
   # The time you want to timeout the user session without activity. After this
@@ -276,4 +291,11 @@ Devise.setup do |config|
   # When using OmniAuth, Devise cannot automatically set OmniAuth path,
   # so you need to do it manually. For the users scope, it would be:
   # config.omniauth_path_prefix = '/my_engine/users/auth'
+
+  # ==> Turbolinks configuration
+  # If your app is using Turbolinks, Turbolinks::Controller needs to be included to make redirection work correctly:
+  #
+  # ActiveSupport.on_load(:devise_failure_app) do
+  #   include Turbolinks::Controller
+  # end
 end

@@ -1,10 +1,12 @@
+# frozen_string_literal: true
+
 require 'devise/strategies/rememberable'
 require 'devise/hooks/rememberable'
 require 'devise/hooks/forgetable'
 
 module Devise
   module Models
-    # Rememberable manages generating and clearing token for remember the user
+    # Rememberable manages generating and clearing token for remembering the user
     # from a saved cookie. Rememberable also has utility methods for dealing
     # with serializing the user into the cookie and back from the cookie, trying
     # to lookup the record based on the saved information.
@@ -39,16 +41,14 @@ module Devise
     module Rememberable
       extend ActiveSupport::Concern
 
-      attr_accessor :remember_me, :extend_remember_period
+      attr_accessor :remember_me
 
       def self.required_fields(klass)
         [:remember_created_at]
       end
 
-      # TODO: We were used to receive a extend period argument but we no longer do.
-      # Remove this for Devise 4.0.
-      def remember_me!(*)
-        self.remember_token = self.class.remember_token if respond_to?(:remember_token)
+      def remember_me!
+        self.remember_token ||= self.class.remember_token if respond_to?(:remember_token)
         self.remember_created_at ||= Time.now.utc
         save(validate: false) if self.changed?
       end
@@ -66,13 +66,17 @@ module Devise
         self.class.remember_for.from_now
       end
 
+      def extend_remember_period
+        self.class.extend_remember_period
+      end
+
       def rememberable_value
         if respond_to?(:remember_token)
           remember_token
         elsif respond_to?(:authenticatable_salt) && (salt = authenticatable_salt.presence)
           salt
         else
-          raise "authenticable_salt returned nil for the #{self.class.name} model. " \
+          raise "authenticatable_salt returned nil for the #{self.class.name} model. " \
             "In order to use rememberable, you must ensure a password is always set " \
             "or have a remember_token column in your model or implement your own " \
             "rememberable_value in the model with custom logic."
@@ -147,9 +151,6 @@ module Devise
           end
         end
 
-        private
-
-        # TODO: extend_remember_period is no longer used
         Devise::Models.config(self, :remember_for, :extend_remember_period, :rememberable_options, :expire_all_remember_me_on_sign_out)
       end
     end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 require 'test_models'
 require 'digest/sha1'
@@ -86,6 +88,13 @@ class DatabaseAuthenticatableTest < ActiveSupport::TestCase
     assert_equal( {'strip_whitespace' => 'strip_whitespace_val', 'do_not_strip_whitespace' => ' do_not_strip_whitespace_val '}, conditions )
   end
 
+  test 'param filter should not add keys to filtered hash' do
+    conditions = { 'present' => 'present_val' }
+    conditions.default = ''
+    conditions = Devise::ParameterFilter.new(['not_present'], []).filter(conditions)
+    assert_equal({ 'present' => 'present_val' }, conditions)
+  end
+
   test 'should respond to password and password confirmation' do
     user = new_user
     assert user.respond_to?(:password)
@@ -124,7 +133,7 @@ class DatabaseAuthenticatableTest < ActiveSupport::TestCase
   test 'should test for a valid password' do
     user = create_user
     assert user.valid_password?('12345678')
-    assert_not user.valid_password?('654321')
+    refute user.valid_password?('654321')
   end
 
   test 'should not raise error with an empty password' do
@@ -136,7 +145,7 @@ class DatabaseAuthenticatableTest < ActiveSupport::TestCase
   test 'should be an invalid password if the user has an empty password' do
     user = create_user
     user.encrypted_password = ''
-    assert_not user.valid_password?('654321')
+    refute user.valid_password?('654321')
   end
 
   test 'should respond to current password' do
@@ -152,7 +161,7 @@ class DatabaseAuthenticatableTest < ActiveSupport::TestCase
 
   test 'should add an error to current password when it is invalid' do
     user = create_user
-    assert_not user.update_with_password(current_password: 'other',
+    refute user.update_with_password(current_password: 'other',
       password: 'pass4321', password_confirmation: 'pass4321')
     assert user.reload.valid_password?('12345678')
     assert_match "is invalid", user.errors[:current_password].join
@@ -160,7 +169,7 @@ class DatabaseAuthenticatableTest < ActiveSupport::TestCase
 
   test 'should add an error to current password when it is blank' do
     user = create_user
-    assert_not user.update_with_password(password: 'pass4321',
+    refute user.update_with_password(password: 'pass4321',
       password_confirmation: 'pass4321')
     assert user.reload.valid_password?('12345678')
     assert_match "can't be blank", user.errors[:current_password].join
@@ -170,7 +179,7 @@ class DatabaseAuthenticatableTest < ActiveSupport::TestCase
     user = UserWithValidation.create!(valid_attributes)
     user.save
     assert user.persisted?
-    assert_not user.update_with_password(username: "")
+    refute user.update_with_password(username: "")
     assert_match "usertest", user.reload.username
     assert_match "can't be blank", user.errors[:username].join
   end
@@ -183,14 +192,14 @@ class DatabaseAuthenticatableTest < ActiveSupport::TestCase
 
   test 'should not update password with invalid confirmation' do
     user = create_user
-    assert_not user.update_with_password(current_password: '12345678',
+    refute user.update_with_password(current_password: '12345678',
       password: 'pass4321', password_confirmation: 'other')
     assert user.reload.valid_password?('12345678')
   end
 
   test 'should clean up password fields on failure' do
     user = create_user
-    assert_not user.update_with_password(current_password: '12345678',
+    refute user.update_with_password(current_password: '12345678',
       password: 'pass4321', password_confirmation: 'other')
     assert user.password.blank?
     assert user.password_confirmation.blank?
@@ -217,14 +226,14 @@ class DatabaseAuthenticatableTest < ActiveSupport::TestCase
 
   test 'should not destroy user with invalid password' do
     user = create_user
-    assert_not user.destroy_with_password('other')
+    refute user.destroy_with_password('other')
     assert user.persisted?
     assert_match "is invalid", user.errors[:current_password].join
   end
 
   test 'should not destroy user with blank password' do
     user = create_user
-    assert_not user.destroy_with_password(nil)
+    refute user.destroy_with_password(nil)
     assert user.persisted?
     assert_match "can't be blank", user.errors[:current_password].join
   end
@@ -232,15 +241,47 @@ class DatabaseAuthenticatableTest < ActiveSupport::TestCase
   test 'should not email on password change' do
     user = create_user
     assert_email_not_sent do
-      assert user.update_attributes(password: 'newpass', password_confirmation: 'newpass')
+      assert user.update(password: 'newpass', password_confirmation: 'newpass')
     end
   end
 
-  test 'should email on password change when configured' do
+  test 'should notify previous email on email change when configured' do
+    swap Devise, send_email_changed_notification: true do
+      user = create_user
+      original_email = user.email
+      assert_email_sent original_email do
+        assert user.update(email: 'new-email@example.com')
+      end
+      assert_match original_email, ActionMailer::Base.deliveries.last.body.encoded
+    end
+  end
+
+  test 'should notify email on password change when configured' do
     swap Devise, send_password_change_notification: true do
       user = create_user
       assert_email_sent user.email do
-        assert user.update_attributes(password: 'newpass', password_confirmation: 'newpass')
+        assert user.update(password: 'newpass', password_confirmation: 'newpass')
+      end
+      assert_match user.email, ActionMailer::Base.deliveries.last.body.encoded
+    end
+  end
+
+  test 'should not notify email on password change even when configured if skip_password_change_notification! is invoked' do
+    swap Devise, send_password_change_notification: true do
+      user = create_user
+      user.skip_password_change_notification!
+      assert_email_not_sent do
+        assert user.update(password: 'newpass', password_confirmation: 'newpass')
+      end
+    end
+  end
+
+  test 'should not notify email on email change even when configured if skip_email_changed_notification! is invoked' do
+    swap Devise, send_email_changed_notification: true do
+      user = create_user
+      user.skip_email_changed_notification!
+      assert_email_not_sent do
+        assert user.update(email: 'new-email@example.com')
       end
     end
   end
@@ -252,15 +293,15 @@ class DatabaseAuthenticatableTest < ActiveSupport::TestCase
   end
 
   test 'required_fields should be encryptable_password and the email field by default' do
-    assert_same_content Devise::Models::DatabaseAuthenticatable.required_fields(User), [
-      :email,
-      :encrypted_password
+    assert_equal Devise::Models::DatabaseAuthenticatable.required_fields(User), [
+      :encrypted_password,
+      :email
     ]
   end
 
   test 'required_fields should be encryptable_password and the login when the login is on authentication_keys' do
     swap Devise, authentication_keys: [:login] do
-      assert_same_content Devise::Models::DatabaseAuthenticatable.required_fields(User), [
+      assert_equal Devise::Models::DatabaseAuthenticatable.required_fields(User), [
         :encrypted_password,
         :login
       ]

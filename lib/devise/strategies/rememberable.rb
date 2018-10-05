@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'devise/strategies/authenticatable'
 
 module Devise
@@ -25,8 +27,7 @@ module Devise
         end
 
         if validate(resource)
-          remember_me(resource)
-          extend_remember_me_period(resource)
+          remember_me(resource) if extend_remember_me?(resource)
           resource.after_remembered
           success!(resource)
         end
@@ -43,10 +44,8 @@ module Devise
 
     private
 
-      def extend_remember_me_period(resource)
-        if resource.respond_to?(:extend_remember_period=)
-          resource.extend_remember_period = mapping.to.extend_remember_period
-        end
+      def extend_remember_me?(resource)
+        resource.respond_to?(:extend_remember_period) && resource.extend_remember_period
       end
 
       def remember_me?

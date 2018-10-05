@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 
 class FakeRequest < Struct.new(:path_info, :params)
@@ -35,8 +37,8 @@ class MappingTest < ActiveSupport::TestCase
     assert_equal [], Devise.mappings[:skip_admin].used_routes
   end
 
-  test 'sign_out_via defaults to :get' do
-    assert_equal :get, Devise.mappings[:user].sign_out_via
+  test 'sign_out_via defaults to :delete' do
+    assert_equal :delete, Devise.mappings[:user].sign_out_via
   end
 
   test 'allows custom sign_out_via to be given' do
@@ -115,7 +117,7 @@ class MappingTest < ActiveSupport::TestCase
     assert mapping.authenticatable?
     assert mapping.recoverable?
     assert mapping.lockable?
-    assert_not mapping.omniauthable?
+    refute mapping.omniauthable?
   end
 
   test 'find mapping by path' do

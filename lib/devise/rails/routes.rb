@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "active_support/core_ext/object/try"
 require "active_support/core_ext/hash/slice"
 
@@ -338,7 +340,7 @@ module ActionDispatch::Routing
 
     # Sets the devise scope to be used in the controller. If you have custom routes,
     # you are required to call this method (also aliased as :as) in order to specify
-    # to which controller it is targetted.
+    # to which controller it is targeted.
     #
     #   as :user do
     #     get "sign_in", to: "devise/sessions#new"
@@ -441,19 +443,17 @@ ERROR
 
         set_omniauth_path_prefix!(path_prefix)
 
-        providers = Regexp.union(mapping.to.omniauth_providers.map(&:to_s))
+        mapping.to.omniauth_providers.each do |provider|
+          match "#{path_prefix}/#{provider}",
+            to: "#{controllers[:omniauth_callbacks]}#passthru",
+            as: "#{provider}_omniauth_authorize",
+            via: [:get, :post]
 
-        match "#{path_prefix}/:provider",
-          constraints: { provider: providers },
-          to: "#{controllers[:omniauth_callbacks]}#passthru",
-          as: :omniauth_authorize,
-          via: [:get, :post]
-
-        match "#{path_prefix}/:action/callback",
-          constraints: { action: providers },
-          to: "#{controllers[:omniauth_callbacks]}#:action",
-          as: :omniauth_callback,
-          via: [:get, :post]
+          match "#{path_prefix}/#{provider}/callback",
+            to: "#{controllers[:omniauth_callbacks]}##{provider}",
+            as: "#{provider}_omniauth_callback",
+            via: [:get, :post]
+        end
       ensure
         @scope = current_scope
       end

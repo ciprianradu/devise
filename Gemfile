@@ -1,15 +1,24 @@
+# frozen_string_literal: true
+
 source "https://rubygems.org"
 
 gemspec
 
-gem "rails", "~> 4.2.5"
-gem "omniauth", "~> 1.2.0"
-gem "omniauth-oauth2", "~> 1.1.0"
+gem "rails", "~> 5.2"
+gem "omniauth", "~> 1.3"
+gem "oauth2"
+gem "omniauth-oauth2"
 gem "rdoc"
+
+gem "activemodel-serializers-xml", github: "rails/activemodel-serializers-xml"
+
+gem "rails-controller-testing"
+
+gem "responders", "~> 2.4"
 
 group :test do
   gem "omniauth-facebook"
-  gem "omniauth-openid", "~> 1.0.1"
+  gem "omniauth-openid"
   gem "webrat", "0.7.3", require: false
   gem "mocha", "~> 1.1", require: false
 end
@@ -24,6 +33,7 @@ platforms :ruby do
   gem "sqlite3"
 end
 
-group :mongoid do
-  gem "mongoid", "~> 4.0"
-end
+# TODO:
+# group :mongoid do
+#   gem "mongoid", "~> 4.0.0"
+# end

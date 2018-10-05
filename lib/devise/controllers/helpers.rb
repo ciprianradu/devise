@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Devise
   module Controllers
     # Those helpers are convenience methods added to ApplicationController.
@@ -138,7 +140,7 @@ module Devise
 
       # The main accessor for the warden proxy instance
       def warden
-        request.env['warden']
+        request.env['warden'] or raise MissingWarden
       end
 
       # Return true if it's a devise_controller. false to all controllers unless
@@ -271,16 +273,21 @@ module Devise
 
       private
 
-      def expire_session_data_after_sign_in!
-        ActiveSupport::Deprecation.warn "expire_session_data_after_sign_in! is deprecated " \
-          "in favor of expire_data_after_sign_in!"
-        expire_data_after_sign_in!
-      end
-
       def expire_data_after_sign_out!
         Devise.mappings.each { |_,m| instance_variable_set("@current_#{m.name}", nil) }
         super
       end
+    end
+  end
+
+  class MissingWarden < StandardError
+    def initialize
+      super "Devise could not find the `Warden::Proxy` instance on your request environment.\n" + \
+        "Make sure that your application is loading Devise and Warden as expected and that " + \
+        "the `Warden::Manager` middleware is present in your middleware stack.\n" + \
+        "If you are seeing this on one of your tests, ensure that your tests are either " + \
+        "executing the Rails middleware stack or that your tests are using the `Devise::Test::ControllerHelpers` " + \
+        "module to inject the `request.env['warden']` object for you."
     end
   end
 end

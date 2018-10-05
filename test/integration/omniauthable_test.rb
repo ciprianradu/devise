@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 
 
@@ -40,6 +42,17 @@ class OmniauthableIntegrationTest < Devise::IntegrationTest
     end
   end
 
+  test "omniauth sign in should not run model validations" do
+    stub_action!(:sign_in_facebook) do
+      create_user
+      visit "/users/sign_in"
+      click_link "Sign in with FaceBook"
+      assert warden.authenticated?(:user)
+
+      refute User.validations_performed
+    end
+  end
+
   test "can access omniauth.auth in the env hash" do
     visit "/users/sign_in"
     click_link "Sign in with FaceBook"
@@ -71,7 +84,7 @@ class OmniauthableIntegrationTest < Devise::IntegrationTest
     assert_current_url "/"
     assert_contain "You have signed up successfully."
     assert_contain "Hello User user@example.com"
-    assert_not session["devise.facebook_data"]
+    refute session["devise.facebook_data"]
   end
 
   test "cleans up session on cancel" do

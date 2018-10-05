@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "devise/hooks/lockable"
 
 module Devise
@@ -64,7 +66,7 @@ module Devise
       def send_unlock_instructions
         raw, enc = Devise.token_generator.generate(self.class, :unlock_token)
         self.unlock_token = enc
-        self.save(validate: false)
+        save(validate: false)
         send_devise_notification(:unlock_instructions, raw, {})
         raw
       end
@@ -99,8 +101,7 @@ module Devise
         if super && !access_locked?
           true
         else
-          self.failed_attempts ||= 0
-          self.failed_attempts += 1
+          increment_failed_attempts
           if attempts_exceeded?
             lock_access! unless access_locked?
           else
@@ -108,6 +109,11 @@ module Devise
           end
           false
         end
+      end
+      
+      def increment_failed_attempts
+        self.failed_attempts ||= 0
+        self.failed_attempts += 1
       end
 
       def unauthenticated_message
@@ -155,6 +161,9 @@ module Devise
         end
 
       module ClassMethods
+        # List of strategies that are enabled/supported if :both is used.
+        BOTH_STRATEGIES = [:time, :email]
+
         # Attempt to find a user by its unlock keys. If a record is found, send new
         # unlock instructions to it. If not user is found, returns a new user
         # with an email not found error.
@@ -181,7 +190,8 @@ module Devise
 
         # Is the unlock enabled for the given unlock strategy?
         def unlock_strategy_enabled?(strategy)
-          [:both, strategy].include?(self.unlock_strategy)
+          self.unlock_strategy == strategy ||
+            (self.unlock_strategy == :both && BOTH_STRATEGIES.include?(strategy))
         end
 
         # Is the lock enabled for the given lock strategy?

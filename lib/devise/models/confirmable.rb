@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Devise
   module Models
     # Confirmable is responsible to verify if an account is already confirmed to
@@ -26,7 +28,9 @@ module Devise
     #     initial account confirmation) to be applied. Requires additional unconfirmed_email
     #     db field to be set up (t.reconfirmable in migrations). Until confirmed, new email is
     #     stored in unconfirmed email column, and copied to email column on successful
-    #     confirmation.
+    #     confirmation. Also, when used in conjunction with `send_email_changed_notification`,
+    #     the notification is sent to the original email when the change is requested,
+    #     not when the unconfirmed email is confirmed.
     #   * +confirm_within+: the time before a sent confirmation token becomes invalid.
     #     You can use this to force the user to confirm within a set period of time.
     #     Confirmable will not generate a new token if a repeat confirmation is requested
@@ -43,13 +47,20 @@ module Devise
 
       included do
         before_create :generate_confirmation_token, if: :confirmation_required?
-        after_create  :send_on_create_confirmation_instructions, if: :send_confirmation_notification?
+        after_create :skip_reconfirmation_in_callback!, if: :send_confirmation_notification?
+        if defined?(ActiveRecord) && self < ActiveRecord::Base # ActiveRecord
+          after_commit :send_on_create_confirmation_instructions, on: :create, if: :send_confirmation_notification?
+          after_commit :send_reconfirmation_instructions, on: :update, if: :reconfirmation_required?
+        else # Mongoid
+          after_create :send_on_create_confirmation_instructions, if: :send_confirmation_notification?
+          after_update :send_reconfirmation_instructions, if: :reconfirmation_required?
+        end
         before_update :postpone_email_change_until_confirmation_and_regenerate_confirmation_token, if: :postpone_email_change?
-        after_update  :send_reconfirmation_instructions,  if: :reconfirmation_required?
       end
 
       def initialize(*args, &block)
         @bypass_confirmation_postpone = false
+        @skip_reconfirmation_in_callback = false
         @reconfirmation_required = false
         @skip_confirmation_notification = false
         @raw_confirmation_token = nil
@@ -75,7 +86,7 @@ module Devise
 
           self.confirmed_at = Time.now.utc
 
-          saved = if self.class.reconfirmable && unconfirmed_email.present?
+          saved = if pending_reconfirmation?
             skip_reconfirmation!
             self.email = unconfirmed_email
             self.unconfirmed_email = nil
@@ -89,11 +100,6 @@ module Devise
           after_confirmation if saved
           saved
         end
-      end
-
-      def confirm!(args={})
-        ActiveSupport::Deprecation.warn "confirm! is deprecated in favor of confirm"
-        confirm(args)
       end
 
       # Verifies whether a user is confirmed or not
@@ -164,6 +170,12 @@ module Devise
 
       protected
 
+        # To not require reconfirmation after creating with #save called in a
+        # callback call skip_create_confirmation!
+        def skip_reconfirmation_in_callback!
+          @skip_reconfirmation_in_callback = true
+        end
+
         # A callback method used to deliver confirmation
         # instructions on creation. This can be overridden
         # in models to map to a nice sign up e-mail.
@@ -215,7 +227,7 @@ module Devise
         #   confirmation_period_expired?  # will always return false
         #
         def confirmation_period_expired?
-          self.class.confirm_within && self.confirmation_sent_at && (Time.now > self.confirmation_sent_at + self.class.confirm_within)
+          self.class.confirm_within && self.confirmation_sent_at && (Time.now.utc > self.confirmation_sent_at.utc + self.class.confirm_within)
         end
 
         # Checks whether the record requires any confirmation.
@@ -234,8 +246,7 @@ module Devise
           if self.confirmation_token && !confirmation_period_expired?
             @raw_confirmation_token = self.confirmation_token
           else
-            raw, _ = Devise.token_generator.generate(self.class, :confirmation_token)
-            self.confirmation_token = @raw_confirmation_token = raw
+            self.confirmation_token = @raw_confirmation_token = Devise.friendly_token
             self.confirmation_sent_at = Time.now.utc
           end
         end
@@ -244,26 +255,62 @@ module Devise
           generate_confirmation_token && save(validate: false)
         end
 
-        def postpone_email_change_until_confirmation_and_regenerate_confirmation_token
-          @reconfirmation_required = true
-          self.unconfirmed_email = self.email
-          self.email = self.email_was
-          self.confirmation_token = nil
-          generate_confirmation_token
+        if Devise.activerecord51?
+          def postpone_email_change_until_confirmation_and_regenerate_confirmation_token
+            @reconfirmation_required = true
+            self.unconfirmed_email = self.email
+            self.email = self.email_in_database
+            self.confirmation_token = nil
+            generate_confirmation_token
+          end
+        else
+          def postpone_email_change_until_confirmation_and_regenerate_confirmation_token
+            @reconfirmation_required = true
+            self.unconfirmed_email = self.email
+            self.email = self.email_was
+            self.confirmation_token = nil
+            generate_confirmation_token
+          end
         end
 
-        def postpone_email_change?
-          postpone = self.class.reconfirmable && email_changed? && email_was.present? && !@bypass_confirmation_postpone && self.email.present?
-          @bypass_confirmation_postpone = false
-          postpone
+        if Devise.activerecord51?
+          def postpone_email_change?
+            postpone = self.class.reconfirmable &&
+              will_save_change_to_email? &&
+              !@bypass_confirmation_postpone &&
+              self.email.present? &&
+              (!@skip_reconfirmation_in_callback || !self.email_in_database.nil?)
+            @bypass_confirmation_postpone = false
+            postpone
+          end
+        else
+          def postpone_email_change?
+            postpone = self.class.reconfirmable &&
+              email_changed? &&
+              !@bypass_confirmation_postpone &&
+              self.email.present? &&
+              (!@skip_reconfirmation_in_callback || !self.email_was.nil?)
+            @bypass_confirmation_postpone = false
+            postpone
+          end
         end
 
         def reconfirmation_required?
-          self.class.reconfirmable && @reconfirmation_required && self.email.present?
+          self.class.reconfirmable && @reconfirmation_required && (self.email.present? || self.unconfirmed_email.present?)
         end
 
         def send_confirmation_notification?
           confirmation_required? && !@skip_confirmation_notification && self.email.present?
+        end
+
+        # With reconfirmable, notify the original email when the user first
+        # requests the email change, instead of when the change is confirmed.
+        def send_email_changed_notification?
+          if self.class.reconfirmable
+            self.class.send_email_changed_notification && reconfirmation_required?
+          else
+            super
+          end
         end
 
         # A callback initiated after successfully confirming. This can be

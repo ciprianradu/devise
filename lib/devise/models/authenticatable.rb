@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'active_model/version'
 require 'devise/hooks/activatable'
 require 'devise/hooks/csrf_cleaner'
@@ -102,7 +104,7 @@ module Devise
       # and passing a new list of attributes you want to exempt. All attributes
       # given to :except will simply add names to exempt to Devise internal list.
       def serializable_hash(options = nil)
-        options ||= {}
+        options = options.try(:dup) || {}
         options[:except] = Array(options[:except])
 
         if options[:force_except]
@@ -114,6 +116,15 @@ module Devise
         super(options)
       end
 
+      # Redefine inspect using serializable_hash, to ensure we don't accidentally
+      # leak passwords into exceptions.
+      def inspect
+        inspection = serializable_hash.collect do |k,v|
+          "#{k}: #{respond_to?(:attribute_for_inspect) ? attribute_for_inspect(k) : v.inspect}"
+        end
+        "#<#{self.class} #{inspection.join(", ")}>"
+      end
+
       protected
 
       def devise_mailer
@@ -123,16 +134,18 @@ module Devise
       # This is an internal method called every time Devise needs
       # to send a notification/mail. This can be overridden if you
       # need to customize the e-mail delivery logic. For instance,
-      # if you are using a queue to deliver e-mails (delayed job,
-      # sidekiq, resque, etc), you must add the delivery to the queue
+      # if you are using a queue to deliver e-mails (active job, delayed
+      # job, sidekiq, resque, etc), you must add the delivery to the queue
       # just after the transaction was committed. To achieve this,
       # you can override send_devise_notification to store the
-      # deliveries until the after_commit callback is triggered:
+      # deliveries until the after_commit callback is triggered.
+      #
+      # The following example uses Active Job's `deliver_later` :
       #
       #     class User
       #       devise :database_authenticatable, :confirmable
       #
-      #       after_commit :send_pending_notifications
+      #       after_commit :send_pending_devise_notifications
       #
       #       protected
       #
@@ -141,26 +154,43 @@ module Devise
       #         # delivery until the after_commit callback otherwise
       #         # send now because after_commit will not be called.
       #         if new_record? || changed?
-      #           pending_notifications << [notification, args]
+      #           pending_devise_notifications << [notification, args]
       #         else
-      #           devise_mailer.send(notification, self, *args).deliver
+      #           render_and_send_devise_message(notification, *args)
       #         end
       #       end
       #
-      #       def send_pending_notifications
-      #         pending_notifications.each do |notification, args|
-      #           devise_mailer.send(notification, self, *args).deliver
+      #       private
+      #
+      #       def send_pending_devise_notifications
+      #         pending_devise_notifications.each do |notification, args|
+      #           render_and_send_devise_message(notification, *args)
       #         end
       #
       #         # Empty the pending notifications array because the
       #         # after_commit hook can be called multiple times which
       #         # could cause multiple emails to be sent.
-      #         pending_notifications.clear
+      #         pending_devise_notifications.clear
       #       end
       #
-      #       def pending_notifications
-      #         @pending_notifications ||= []
+      #       def pending_devise_notifications
+      #         @pending_devise_notifications ||= []
       #       end
+      #
+      #       def render_and_send_devise_message(notification, *args)
+      #         message = devise_mailer.send(notification, self, *args)
+      #
+      #         # Deliver later with Active Job's `deliver_later`
+      #         if message.respond_to?(:deliver_later)
+      #           message.deliver_later
+      #         # Remove once we move to Rails 4.2+ only, as `deliver` is deprecated.
+      #         elsif message.respond_to?(:deliver_now)
+      #           message.deliver_now
+      #         else
+      #           message.deliver
+      #         end
+      #       end
+      #
       #     end
       #
       def send_devise_notification(notification, *args)
@@ -235,7 +265,7 @@ module Devise
         #   end
         #
         # Finally, notice that Devise also queries for users in other scenarios
-        # besides authentication, for example when retrieving an user to send
+        # besides authentication, for example when retrieving a user to send
         # an e-mail for password reset. In such cases, find_for_authentication
         # is not called.
         def find_for_authentication(tainted_conditions)
@@ -253,7 +283,7 @@ module Devise
 
         # Find or initialize a record with group of attributes based on a list of required attributes.
         def find_or_initialize_with_errors(required_attributes, attributes, error=:invalid) #:nodoc:
-          attributes = if attributes.respond_to? :permit
+          attributes = if attributes.respond_to? :permit!
             attributes.slice(*required_attributes).permit!.to_h.with_indifferent_access
           else
             attributes.with_indifferent_access.slice(*required_attributes)
